@@ -2,6 +2,8 @@ pipeline {
     agent any
     environment {
         ENVIRONMENT = "staging"
+        AWS_REGION  = "us-east-1"
+        STACK_NAME  = "cp14-mogo-staging"
     }
     stages {
 
@@ -46,7 +48,7 @@ pipeline {
         stage('Integration Test after deploy'){
             steps{
                 script {
-                    def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-staging --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                    def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name ${env.STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
                         returnStdout: true)
                     echo "$BASE_URL"
                     echo 'Initiating Integration Tests'
