@@ -24,12 +24,7 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        def failed = publishCoverage(
-                            failUnhealthy: false,
-                            failUnstable: false,
-                            adapters: [coberturaAdapter(mergeToOneReport: true, path: '**/coverage.xml')]
-                        )
+                        archiveArtifacts artifacts: 'coverage.xml, reports/*', fingerprint: true, allowEmptyArchive: true
                     }
                 }
             }
