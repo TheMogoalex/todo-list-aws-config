@@ -1,6 +1,17 @@
 pipeline {
     agent any
+    environment {
+        ENVIRONMENT = "staging"
+        AWS_REGION  = "us-east-1"
+        STACK_NAME  = "cp14-mogo-staging"
+    }
     stages {
+
+        stage('Get Code'){
+            steps{
+                checkout scm
+            }
+        }
         
         stage('SetUp'){
             steps{
@@ -12,20 +23,15 @@ pipeline {
             steps{
                 echo 'Static program analysis:'
                 sh "bash pipelines/PIPELINE-FULL-STAGING/static_test.sh"
+                archiveArtifacts artifacts: 'reports/*', fingerprint: true
                 echo 'Unit testing:'
                 sh "bash pipelines/PIPELINE-FULL-STAGING/unit_test.sh"
             }
             post {
                 always {
-                    script {
-                        def failed = publishCoverage (failUnhealthy: true, 
-                            globalThresholds: [[thresholdTarget: 'Line', unhealthyThreshold: 70.0]],
-                            adapters: [coberturaAdapter(
-                                mergeToOneReport: true, 
-                                path: '**/coverage.xml')])
+                        archiveArtifacts artifacts: 'coverage.xml, reports/*', fingerprint: true, allowEmptyArchive: true
                     }
-                }
-            }
+                }            
         }
        stage('Build') {
             steps{
@@ -42,13 +48,38 @@ pipeline {
         stage('Integration Test after deploy'){
             steps{
                 script {
-                    def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-staging --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                    def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name ${env.STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
                         returnStdout: true)
                     echo "$BASE_URL"
                     echo 'Initiating Integration Tests'
                     sh "bash pipelines/common-steps/integration.sh $BASE_URL"
                 }
                    
+            }
+        }
+        stage('Promote (merge develop -> master)'){
+            steps{
+                sh '''
+                git config user.email "mogollortega@gmail.com"
+                git config user.name "TheMogoalex"
+                git fetch origin
+                git checkout master
+                git pull origin master
+                git merge --no-ff origin/develop -m "Promote develop -> master"
+                '''
+
+                sshagent(['github']) {
+                sh '''
+                    set -e
+                    mkdir -p ~/.ssh
+                    ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+                    # IMPORTANTE: cambiar el remote a SSH para que use la key del ssh-agent
+                    git remote set-url origin git@github.com:TheMogoalex/CP1.4.git
+
+                    git push origin master
+                '''
+                }
             }
         }
     }
