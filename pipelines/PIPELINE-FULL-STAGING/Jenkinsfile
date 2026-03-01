@@ -60,19 +60,25 @@ pipeline {
         stage('Promote (merge develop -> master)'){
             steps{
                 sh '''
-                    git config user.email "mogollortega@gmail.com "
-                    git config user.name "TheMogoalex"
-                    git fetch origin
-                    git checkout master
-                    git pull origin master
-                    git merge --no-ff origin/develop -m "Promote develop -> master"
-                    '''
+                git config user.email "mogollortega@gmail.com"
+                git config user.name "TheMogoalex"
+                git fetch origin
+                git checkout master
+                git pull origin master
+                git merge --no-ff origin/develop -m "Promote develop -> master"
+                '''
+
                 sshagent(['github']) {
-                    sh '''
+                sh '''
+                    set -e
                     mkdir -p ~/.ssh
                     ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-                    '''
-                    sh 'git push origin master'
+
+                    # IMPORTANTE: cambiar el remote a SSH para que use la key del ssh-agent
+                    git remote set-url origin git@github.com:TheMogoalex/CP1.4.git
+
+                    git push origin master
+                '''
                 }
             }
         }
