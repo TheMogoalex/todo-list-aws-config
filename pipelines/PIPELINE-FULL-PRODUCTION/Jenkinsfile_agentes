@@ -52,26 +52,25 @@ pipeline {
     }
 
     stage('Rest Test (read-only) (agent rest)') {
-      agent { label 'rest' }
-      steps {
+    agent { label 'rest' }
+    steps {
         sh 'whoami && hostname'
-        unstash 'ws'
+        deleteDir()
         checkout scm
+
+        // Crear venv e instalar dependencias en ESTE agente
+        sh 'bash pipelines/PIPELINE-FULL-PRODUCTION/setup.sh'
+
         script {
-          def BASE_URL = sh(
+        def BASE_URL = sh(
             script: "aws cloudformation describe-stacks --stack-name ${env.STACK_NAME} --region ${env.AWS_REGION} --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --output text",
             returnStdout: true
-          ).trim()
+        ).trim()
 
-          echo "BASE_URL=${BASE_URL}"
-          sh "bash pipelines/common-steps/integration_readonly.sh ${BASE_URL}"
+        echo "BASE_URL=${BASE_URL}"
+        sh "bash pipelines/common-steps/integration_readonly.sh ${BASE_URL}"
         }
-      }
-      post {
-        always {
-          archiveArtifacts artifacts: 'reports/*.xml', allowEmptyArchive: true
-        }
-      }
+    }
     }
 
   }
