@@ -19,6 +19,16 @@ class TestApi(unittest.TestCase):
         self.assertIsNotNone(BASE_URL, "URL no configurada")
         self.assertTrue(len(BASE_URL) > 8, "URL no configurada")
 
+    @pytest.mark.readonly
+    def test_api_listtodos_readonly(self):
+        print('---------------------------------------')
+        print('Starting - integration test LIST (read-only)')
+        url = BASE_URL + "/todos"
+        response = requests.get(url)
+        print('Response List Todo:' + str(response.json()))
+        self.assertEqual(response.status_code, 200, "Error en la petición API a {url}")
+        print('End - integration test LIST (read-only)')
+
     def test_api_listtodos(self):
         print('---------------------------------------')
         print('Starting - integration test List TODO')
