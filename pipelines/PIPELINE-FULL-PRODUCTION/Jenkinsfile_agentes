@@ -1,6 +1,6 @@
 pipeline {
   agent none
-  options { timestamps() }
+  options { timestamps(); skipDefaultCheckout(true) }
 
   environment {
     ENVIRONMENT = "production"
@@ -25,6 +25,7 @@ pipeline {
       steps {
         sh 'whoami && hostname'
         unstash 'ws'
+        checkout scm
         sh 'bash pipelines/PIPELINE-FULL-PRODUCTION/setup.sh'
         stash name: 'ws', includes: '**/*'
       }
@@ -35,6 +36,7 @@ pipeline {
       steps {
         sh 'whoami && hostname'
         unstash 'ws'
+        checkout scm
         sh 'bash pipelines/common-steps/build.sh'
       }
     }
@@ -44,6 +46,7 @@ pipeline {
       steps {
         sh 'whoami && hostname'
         unstash 'ws'
+        checkout scm
         sh 'bash pipelines/common-steps/deploy.sh'
       }
     }
@@ -53,6 +56,7 @@ pipeline {
       steps {
         sh 'whoami && hostname'
         unstash 'ws'
+        checkout scm
         script {
           def BASE_URL = sh(
             script: "aws cloudformation describe-stacks --stack-name ${env.STACK_NAME} --region ${env.AWS_REGION} --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --output text",
